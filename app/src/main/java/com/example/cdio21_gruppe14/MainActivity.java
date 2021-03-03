@@ -1,18 +1,24 @@
 package com.example.cdio21_gruppe14;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
-
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
-    private Button button;
-    private TextView textView1;
-    private TextView textView2;
+//https://medium.com/swlh/introduction-to-androids-camerax-with-java-ca384c522c5 <---------------- DENNE GUIDE ER FULGT
+public class MainActivity extends AppCompatActivity {
+    private static final String[] CAMERA_PERMISSION = new String[]{Manifest.permission.CAMERA};
+    private static final int CAMERA_REQUEST_CODE = 10;
+    private Button startGame;
+    private TextView titleView;
+    private TextView headerView;
     private ImageView imageView;
 
     @Override
@@ -20,19 +26,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        textView1 = findViewById(R.id.navn);
-        textView2 = findViewById(R.id.subNavn);
+        titleView = findViewById(R.id.navn);
+        headerView = findViewById(R.id.subNavn);
         imageView = findViewById(R.id.klondike);
 
-        button = findViewById(R.id.begyndKnap);
-        button.setOnClickListener(this);
+        startGame = findViewById(R.id.begyndKnap);
+        startGame.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (hasCameraPermission()){
+                    enableCamera();
+                } else {
+                    requestPermission();
+                }
+            }
+        });
     }
 
-    @Override
-    public void onClick(View v) {
-        if (v == button) {
-            Intent kabale = new Intent(this,KabaleActivity.class);
-            startActivity(kabale);
-        }
+    private boolean hasCameraPermission(){
+        return ContextCompat.checkSelfPermission(this,Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestPermission(){
+        ActivityCompat.requestPermissions(this, CAMERA_PERMISSION, CAMERA_REQUEST_CODE);
+    }
+
+    public void enableCamera(){
+        Intent kabale = new Intent(this,KabaleActivity.class);
+        startActivity(kabale);
     }
 }

@@ -4,13 +4,18 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.media.Image;
 import android.os.Bundle;
+import android.util.Size;
+import android.view.OrientationEventListener;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
@@ -28,22 +33,21 @@ public class KabaleActivity extends AppCompatActivity {
     //--------------VIRKER IKKE!!----------------------
     //-------------------------------------------------
     //-------------------------------------------------
-
-
-
     private PreviewView previewView;
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
     private ImageView imageView;
+    private TextView textView;
 
     private static final int PERMISSION_REQUEST_CAMERA = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_kabale);
 
-        previewView = findViewById(R.id.activity_main_previewView);
+        previewView = findViewById(R.id.previewView);
         //imageView = findViewById(R.id.klondike);
+        textView = findViewById(R.id.textViewTest);
 
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
         requestCamera();
@@ -76,26 +80,31 @@ public class KabaleActivity extends AppCompatActivity {
         cameraProviderFuture.addListener(() -> {
             try {
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                bindCameraPreview(cameraProvider);
+                bindImageAnalysis(cameraProvider);
             } catch (ExecutionException | InterruptedException e) {
                 Toast.makeText(this, "Error starting camera " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }, ContextCompat.getMainExecutor(this));
     }
 
-    private void bindCameraPreview(@NonNull ProcessCameraProvider cameraProvider) {
-        //previewView.setPreferredImplementationMode(PreviewView.ImplementationMode.SURFACE_VIEW);
 
-        Preview preview = new Preview.Builder()
-                .build();
-
-        CameraSelector cameraSelector = new CameraSelector.Builder()
-                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                .build();
-
-        //preview.setSurfaceProvider(previewView.createSurfaceProvider());
-
-        Camera camera = cameraProvider.bindToLifecycle((LifecycleOwner)this, cameraSelector, preview);
-    }
-
+        private void bindImageAnalysis(@NonNull ProcessCameraProvider cameraProvider) {
+            ImageAnalysis imageAnalysis =
+                    new ImageAnalysis.Builder().setTargetResolution(new Size(1280, 720))
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
+            imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), ImageProxy::close);
+            OrientationEventListener orientationEventListener = new OrientationEventListener(this) {
+                @Override
+                public void onOrientationChanged(int orientation) {
+                    textView.setText(Integer.toString(orientation));
+                }
+            };
+            orientationEventListener.enable();
+            Preview preview = new Preview.Builder().build();
+            CameraSelector cameraSelector = new CameraSelector.Builder()
+                    .requireLensFacing(CameraSelector.LENS_FACING_BACK).build();
+            preview.setSurfaceProvider(previewView.getSurfaceProvider());
+            cameraProvider.bindToLifecycle((LifecycleOwner)this, cameraSelector,
+                    imageAnalysis, preview);
+        }
 }
